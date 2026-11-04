@@ -12,11 +12,12 @@ Este projeto demonstra como construir uma interface web reativa e intuitiva util
 
 ## ✨ Funcionalidades
 
-- **Adicionar Tarefa:** Digite o nome da tarefa e clique em **Adicionar** (ou pressione a tecla `Enter`).
-- **Validação de Entrada:** O sistema impede a inclusão de tarefas vazias ou que contenham apenas espaços em branco, exibindo um alerta amigável.
-- **Marcar como Concluída / Pendente:** Alterne o status de qualquer tarefa clicando no ícone de círculo ou no botão de status.
+- **Adicionar Tarefa (CRIAR):** Digite o nome da tarefa e clique em **Adicionar** (ou pressione a tecla `Enter`).
+- **Visualizar Lista (VISUALIZAR):** Exibe as tarefas com indicação explícita de status (Pendente ou Concluída).
+- **Editar Tarefa (ATUALIZAR):** Clique no botão **Editar** para abrir o campo de edição com os botões **Salvar** e **Cancelar**. O salvamento valida campos vazios e preserva o status e o texto riscado das tarefas concluídas.
+- **Marcar como Concluída / Pendente (ATUALIZAR):** Alterne o status de qualquer tarefa clicando no ícone de círculo ou no botão de status.
 - **Texto Riscado para Tarefas Concluídas:** Apenas as tarefas marcadas como concluídas recebem o efeito visual de texto tachado (`line-through`) e cor suavizada.
-- **Remover Tarefa:** Exclua tarefas individualmente clicando no botão **Remover**.
+- **Remover Tarefa (EXCLUIR):** Exclua tarefas individualmente clicando no botão **Remover**.
 - **Contadores em Tempo Real:** Acompanhe a quantidade total de tarefas cadastradas, quantas estão pendentes e quantas já foram concluídas.
 
 ---
@@ -121,9 +122,9 @@ if (textoLimpo === '') {
 
 ## 💡 Próximos Passos Sugeridos para Praticar
 
+- [x] **Edição de tarefas:** Permitir alterar o texto de uma tarefa já cadastrada com validação e cancelamento.
 - [ ] **Persistência local:** Salvar a lista no `localStorage` do navegador para não perder as tarefas ao recarregar a página.
 - [ ] **Filtros de visualização:** Botões para ver "Todas", "Apenas Pendentes" ou "Apenas Concluídas".
-- [ ] **Edição de tarefas:** Permitir alterar o texto de uma tarefa já cadastrada.
 - [ ] **Limpar tudo:** Um botão para apagar todas as tarefas concluídas de uma só vez.
 
 ---

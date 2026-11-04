@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, CheckCircle2, Circle, ListTodo, AlertCircle } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  CheckCircle2,
+  Circle,
+  ListTodo,
+  AlertCircle,
+  Pencil,
+  Check,
+  X,
+} from 'lucide-react';
 
 // Estrutura que define o formato de cada tarefa
 interface Tarefa {
@@ -9,11 +19,10 @@ interface Tarefa {
 }
 
 export default function App() {
-  // Estado para guardar o texto que o usuário está digitando no campo
+  // Estado para guardar o texto que o usuário está digitando no campo de nova tarefa
   const [textoDaNovaTarefa, setTextoDaNovaTarefa] = useState<string>('');
 
   // Estado para armazenar a lista com todas as tarefas cadastradas
-  // Começamos com duas tarefas de exemplo para você ver como funciona logo ao abrir
   const [listaDeTarefas, setListaDeTarefas] = useState<Tarefa[]>([
     {
       id: 1,
@@ -27,13 +36,23 @@ export default function App() {
     },
   ]);
 
-  // Estado para exibir uma mensagem de aviso caso tente adicionar tarefa em branco
+  // Estado para exibir aviso caso tente adicionar tarefa em branco
   const [mensagemDeErro, setMensagemDeErro] = useState<string>('');
 
-  // Função para adicionar uma nova tarefa à lista
+  // Estados para controlar a edição de uma tarefa (CRUD: Atualizar)
+  // Guarda o id da tarefa que está sendo editada no momento (ou null se nenhuma)
+  const [idEmEdicao, setIdEmEdicao] = useState<number | null>(null);
+  // Guarda o texto digitado durante a edição
+  const [textoEmEdicao, setTextoEmEdicao] = useState<string>('');
+  // Guarda o aviso de erro caso tente salvar a edição com texto em branco
+  const [mensagemDeErroEdicao, setMensagemDeErroEdicao] = useState<string>('');
+
+  // ==========================================
+  // 1. CRIAR (Create): Adicionar nova tarefa
+  // ==========================================
   function adicionarTarefa(evento?: React.FormEvent) {
     if (evento) {
-      evento.preventDefault(); // Evita que a página recarregue ao enviar o formulário
+      evento.preventDefault(); // Evita o recarregamento padrão da página
     }
 
     // A função .trim() remove os espaços em branco no início e no fim
@@ -55,16 +74,18 @@ export default function App() {
     // Atualiza a lista adicionando a nova tarefa no final
     setListaDeTarefas([...listaDeTarefas, novaTarefa]);
 
-    // Limpa o campo de texto e remove qualquer mensagem de erro
+    // Limpa o campo de texto e remove qualquer aviso de erro
     setTextoDaNovaTarefa('');
     setMensagemDeErro('');
   }
 
-  // Função para alternar o status da tarefa entre concluída e pendente
+  // ==========================================
+  // 2. ATUALIZAR (Update): Alternar status da tarefa
+  // ==========================================
   function alternarStatusTarefa(idParaAlterar: number) {
     const listaAtualizada = listaDeTarefas.map((tarefa) => {
       if (tarefa.id === idParaAlterar) {
-        // Inverte o valor de concluida (se for false vira true, se for true vira false)
+        // Inverte o valor de concluida (de false para true, ou de true para false)
         return {
           ...tarefa,
           concluida: !tarefa.concluida,
@@ -76,9 +97,62 @@ export default function App() {
     setListaDeTarefas(listaAtualizada);
   }
 
-  // Função para remover uma tarefa da lista pelo seu id
+  // ==========================================
+  // 3. ATUALIZAR (Update): Edição do texto da tarefa
+  // ==========================================
+  // Abre o modo de edição para uma tarefa específica
+  function iniciarEdicao(tarefa: Tarefa) {
+    setIdEmEdicao(tarefa.id);
+    setTextoEmEdicao(tarefa.texto);
+    setMensagemDeErroEdicao('');
+  }
+
+  // Cancela a edição, descartando alterações e mantendo o texto original
+  function cancelarEdicao() {
+    setIdEmEdicao(null);
+    setTextoEmEdicao('');
+    setMensagemDeErroEdicao('');
+  }
+
+  // Salva o novo texto da tarefa após validação
+  function salvarEdicao(idParaAtualizar: number) {
+    const textoLimpo = textoEmEdicao.trim();
+
+    // Validação: se estiver vazio ou com apenas espaços, mostra aviso e mantém texto original
+    if (textoLimpo === '') {
+      setMensagemDeErroEdicao('O texto da tarefa não pode ficar vazio!');
+      return;
+    }
+
+    // Atualiza o texto na lista, preservando exatamente o status de concluída
+    const listaAtualizada = listaDeTarefas.map((tarefa) => {
+      if (tarefa.id === idParaAtualizar) {
+        return {
+          ...tarefa,
+          texto: textoLimpo, // Atualiza apenas o texto
+        };
+      }
+      return tarefa;
+    });
+
+    setListaDeTarefas(listaAtualizada);
+
+    // Fecha o formulário de edição
+    setIdEmEdicao(null);
+    setTextoEmEdicao('');
+    setMensagemDeErroEdicao('');
+  }
+
+  // ==========================================
+  // 4. EXCLUIR (Delete): Remover uma tarefa da lista
+  // ==========================================
   function removerTarefa(idParaRemover: number) {
-    // O método .filter cria uma nova lista contendo apenas as tarefas que têm id diferente do que queremos apagar
+    // Se a tarefa estiver sendo editada no momento, fecha a edição
+    if (idEmEdicao === idParaRemover) {
+      cancelarEdicao();
+    }
+
+    // O método .filter cria uma nova lista contendo apenas as tarefas que têm id diferente
     const listaAtualizada = listaDeTarefas.filter(
       (tarefa) => tarefa.id !== idParaRemover
     );
@@ -86,7 +160,7 @@ export default function App() {
     setListaDeTarefas(listaAtualizada);
   }
 
-  // Cálculos simples para o resumo de tarefas
+  // Cálculos para o resumo de tarefas
   const totalDeTarefas = listaDeTarefas.length;
   const tarefasConcluidas = listaDeTarefas.filter((t) => t.concluida).length;
   const tarefasPendentes = totalDeTarefas - tarefasConcluidas;
@@ -102,13 +176,13 @@ export default function App() {
           Minha Lista de Tarefas
         </h1>
         <p className="text-sm text-slate-600 mt-2">
-          Primeira versão: adicione, marque como concluída e remova tarefas facilmente.
+          Adicione, visualize, edite, conclua e remova tarefas com facilidade.
         </p>
       </header>
 
       {/* Cartão Principal */}
       <main className="w-full max-w-xl bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
-        {/* Formulário para digitar e adicionar tarefa */}
+        {/* Formulário para digitar e adicionar nova tarefa (CRIAR) */}
         <section className="p-6 border-b border-slate-100 bg-slate-50/50">
           <form onSubmit={adicionarTarefa} className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1">
@@ -153,7 +227,7 @@ export default function App() {
           <span>Concluídas: <strong>{tarefasConcluidas}</strong></span>
         </section>
 
-        {/* Lista de tarefas cadastradas */}
+        {/* Lista de tarefas cadastradas (VISUALIZAR) */}
         <section className="p-6">
           <h2 className="text-base font-semibold text-slate-900 mb-4">
             Tarefas Cadastradas
@@ -170,71 +244,154 @@ export default function App() {
             </div>
           ) : (
             <ul className="space-y-3">
-              {listaDeTarefas.map((tarefa) => (
-                <li
-                  key={tarefa.id}
-                  className="p-4 rounded-xl border border-slate-200 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs hover:border-slate-300 transition"
-                >
-                  {/* Opção para marcar como concluída e texto da tarefa */}
-                  <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
-                    <button
-                      type="button"
-                      onClick={() => alternarStatusTarefa(tarefa.id)}
-                      className="mt-0.5 sm:mt-0 text-slate-600 hover:text-blue-600 transition cursor-pointer"
-                      title={tarefa.concluida ? 'Marcar como pendente' : 'Marcar como concluída'}
-                      aria-label={`Marcar tarefa "${tarefa.texto}" como ${tarefa.concluida ? 'pendente' : 'concluída'}`}
-                    >
-                      {tarefa.concluida ? (
-                        <CheckCircle2 className="w-5 h-5 text-blue-600" />
-                      ) : (
-                        <Circle className="w-5 h-5 text-slate-400" />
-                      )}
-                    </button>
+              {listaDeTarefas.map((tarefa) => {
+                const estaSendoEditada = idEmEdicao === tarefa.id;
 
-                    <div className="flex flex-col flex-1 min-w-0">
-                      {/* Apenas tarefas concluídas aparecem com o texto riscado */}
-                      <span
-                        className={`text-sm sm:text-base break-words transition-all duration-200 ${
-                          tarefa.concluida
-                            ? 'line-through text-slate-400'
-                            : 'no-underline text-slate-800 font-normal'
-                        }`}
-                      >
-                        {tarefa.texto}
-                      </span>
+                return (
+                  <li
+                    key={tarefa.id}
+                    className="p-4 rounded-xl border border-slate-200 bg-white flex flex-col gap-3 shadow-xs hover:border-slate-300 transition"
+                  >
+                    {/* Se estiver no modo de edição para esta tarefa */}
+                    {estaSendoEditada ? (
+                      <div className="flex flex-col gap-3">
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <input
+                            type="text"
+                            value={textoEmEdicao}
+                            onChange={(e) => {
+                              setTextoEmEdicao(e.target.value);
+                              if (mensagemDeErroEdicao) setMensagemDeErroEdicao('');
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') salvarEdicao(tarefa.id);
+                              if (e.key === 'Escape') cancelarEdicao();
+                            }}
+                            autoFocus
+                            className="flex-1 px-3 py-2 rounded-lg border border-blue-400 bg-blue-50/20 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Edite o nome da tarefa..."
+                          />
 
-                      {/* Informa expressamente se está Pendente ou Concluída */}
-                      <span className="text-xs text-slate-500 mt-1">
-                        Status:{' '}
-                        <span className="font-semibold text-slate-700">
-                          {tarefa.concluida ? 'Concluída' : 'Pendente'}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => salvarEdicao(tarefa.id)}
+                              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white transition cursor-pointer"
+                              title="Salvar alterações"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Salvar</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={cancelarEdicao}
+                              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 transition cursor-pointer"
+                              title="Cancelar edição"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                              <span>Cancelar</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Aviso de validação da edição */}
+                        {mensagemDeErroEdicao && (
+                          <div className="flex items-center gap-1.5 text-xs text-red-600 bg-red-50 border border-red-200 px-2.5 py-1.5 rounded-md">
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                            <span>{mensagemDeErroEdicao}</span>
+                          </div>
+                        )}
+
+                        <span className="text-xs text-slate-400 italic">
+                          Dica: pressione Enter para salvar ou Esc para cancelar.
                         </span>
-                      </span>
-                    </div>
-                  </div>
+                      </div>
+                    ) : (
+                      /* Modo de visualização normal */
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        {/* Opção para marcar como concluída e texto da tarefa */}
+                        <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => alternarStatusTarefa(tarefa.id)}
+                            className="mt-0.5 sm:mt-0 text-slate-600 hover:text-blue-600 transition cursor-pointer"
+                            title={
+                              tarefa.concluida
+                                ? 'Marcar como pendente'
+                                : 'Marcar como concluída'
+                            }
+                            aria-label={`Marcar tarefa "${tarefa.texto}" como ${
+                              tarefa.concluida ? 'pendente' : 'concluída'
+                            }`}
+                          >
+                            {tarefa.concluida ? (
+                              <CheckCircle2 className="w-5 h-5 text-blue-600" />
+                            ) : (
+                              <Circle className="w-5 h-5 text-slate-400" />
+                            )}
+                          </button>
 
-                  {/* Ações da tarefa: botão de alternar status e botão Remover */}
-                  <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => alternarStatusTarefa(tarefa.id)}
-                      className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 transition cursor-pointer"
-                    >
-                      {tarefa.concluida ? 'Marcar como pendente' : 'Marcar como concluída'}
-                    </button>
+                          <div className="flex flex-col flex-1 min-w-0">
+                            {/* Apenas tarefas concluídas aparecem com o texto riscado */}
+                            <span
+                              className={`text-sm sm:text-base break-words transition-all duration-200 ${
+                                tarefa.concluida
+                                  ? 'line-through text-slate-400'
+                                  : 'no-underline text-slate-800 font-normal'
+                              }`}
+                            >
+                              {tarefa.texto}
+                            </span>
 
-                    <button
-                      type="button"
-                      onClick={() => removerTarefa(tarefa.id)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition cursor-pointer"
-                      title="Remover tarefa"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Remover</span>
-                    </button>
-                  </div>
-                </li>
-              ))}
+                            {/* Informa expressamente se está Pendente ou Concluída */}
+                            <span className="text-xs text-slate-500 mt-1">
+                              Status:{' '}
+                              <span className="font-semibold text-slate-700">
+                                {tarefa.concluida ? 'Concluída' : 'Pendente'}
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Ações da tarefa: Botão Editar, Botão de Status e Botão Remover */}
+                        <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                          {/* Botão Editar (abre o formulário de edição) */}
+                          <button
+                            type="button"
+                            onClick={() => iniciarEdicao(tarefa)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                            title="Editar texto da tarefa"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            <span>Editar</span>
+                          </button>
+
+                          {/* Botão para alternar status */}
+                          <button
+                            type="button"
+                            onClick={() => alternarStatusTarefa(tarefa.id)}
+                            className="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                          >
+                            {tarefa.concluida ? 'Marcar como pendente' : 'Marcar como concluída'}
+                          </button>
+
+                          {/* Botão Remover */}
+                          <button
+                            type="button"
+                            onClick={() => removerTarefa(tarefa.id)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition cursor-pointer"
+                            title="Remover tarefa"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Remover</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>
@@ -243,10 +400,7 @@ export default function App() {
       {/* Rodapé didático com dicas de programação */}
       <footer className="w-full max-w-xl text-center mt-6 text-xs text-slate-500">
         <p>
-          💡 Dica de estudo: você pode abrir o código para ver como o estado (
-          <code className="bg-slate-200 px-1 py-0.5 rounded text-slate-700 font-mono">useState</code>) e as funções (
-          <code className="bg-slate-200 px-1 py-0.5 rounded text-slate-700 font-mono">adicionarTarefa</code>,{' '}
-          <code className="bg-slate-200 px-1 py-0.5 rounded text-slate-700 font-mono">removerTarefa</code>) gerenciam os dados.
+          💡 <strong>CRUD completo implementado:</strong> Criar (Adicionar), Visualizar (Lista), Atualizar (Editar texto / Alternar status) e Excluir (Remover).
         </p>
       </footer>
     </div>
