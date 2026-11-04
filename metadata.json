@@ -1,0 +1,6 @@
+{
+  "name": "Lista de Tarefas Simples",
+  "description": "Uma lista de tarefas interativa, simples e didática para iniciantes em programação.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
