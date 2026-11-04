@@ -192,8 +192,14 @@ export default function App() {
                     </button>
 
                     <div className="flex flex-col flex-1 min-w-0">
-                      {/* O texto da tarefa permanece com visual uniforme conforme solicitado para esta primeira etapa */}
-                      <span className="text-slate-800 text-sm sm:text-base break-words font-normal">
+                      {/* Apenas tarefas concluídas aparecem com o texto riscado */}
+                      <span
+                        className={`text-sm sm:text-base break-words transition-all duration-200 ${
+                          tarefa.concluida
+                            ? 'line-through text-slate-400'
+                            : 'no-underline text-slate-800 font-normal'
+                        }`}
+                      >
                         {tarefa.texto}
                       </span>
 
