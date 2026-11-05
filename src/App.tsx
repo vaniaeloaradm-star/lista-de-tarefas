@@ -12,7 +12,14 @@ import {
   Calendar,
   Clock,
   AlertTriangle,
+  CalendarPlus,
+  LogOut,
+  CheckCheck,
+  Loader2,
 } from 'lucide-react';
+import type { User } from 'firebase/auth';
+import { initAuth, googleSignIn, logout } from './services/googleAuth';
+import { criarEventoNoGoogleCalendar } from './services/googleCalendar';
 
 // Estrutura que define o formato de cada tarefa
 interface Tarefa {
@@ -21,6 +28,8 @@ interface Tarefa {
   concluida: boolean;
   dataVencimento?: string; // Formato padrão "AAAA-MM-DD" ou vazio
   horarioVencimento?: string; // Formato padrão "HH:MM" ou vazio
+  sincronizadaCalendar?: boolean; // Indica se foi sincronizada via API
+  linkGoogleCalendar?: string; // Link direto para o evento criado na agenda
 }
 
 // Chave utilizada para persistência no localStorage
@@ -35,20 +44,17 @@ interface SituacaoVencimento {
 }
 
 // Função auxiliar para calcular se uma data vence no dia, no dia seguinte, está atrasada ou ainda não está para vencer
-// Baseada sempre na data local do aparelho do usuário
 function calcularSituacaoVencimento(dataIso?: string): SituacaoVencimento {
   if (!dataIso) {
     return { tipo: 'sem_data', rotulo: '' };
   }
 
-  // Obtém a data local atual (hoje) no formato AAAA-MM-DD
   const agora = new Date();
   const anoHoje = agora.getFullYear();
   const mesHoje = String(agora.getMonth() + 1).padStart(2, '0');
   const diaHoje = String(agora.getDate()).padStart(2, '0');
   const hojeIso = `${anoHoje}-${mesHoje}-${diaHoje}`;
 
-  // Obtém a data local de amanhã (dia seguinte) no formato AAAA-MM-DD
   const dataAmanha = new Date(agora);
   dataAmanha.setDate(dataAmanha.getDate() + 1);
   const anoAmanha = dataAmanha.getFullYear();
@@ -66,7 +72,6 @@ function calcularSituacaoVencimento(dataIso?: string): SituacaoVencimento {
     return { tipo: 'amanha', rotulo: 'Vence no dia seguinte' };
   }
 
-  // Data futura além do dia seguinte: ainda não está para vencer (Azul Marinho)
   return { tipo: 'a_vencer', rotulo: 'Ainda não está para vencer' };
 }
 
@@ -79,6 +84,54 @@ function formatarDataParaExibicao(dataIso?: string): string {
     return `${dia}/${mes}/${ano}`;
   }
   return dataIso;
+}
+
+// Calcula o dia seguinte no formato AAAAMMDD para eventos de dia inteiro no link de template
+function calcularDiaSeguinteIso(dataIso: string): string {
+  const partes = dataIso.split('-').map(Number);
+  if (partes.length === 3) {
+    const [ano, mes, dia] = partes;
+    const d = new Date(ano, mes - 1, dia);
+    d.setDate(d.getDate() + 1);
+    const anoFim = d.getFullYear();
+    const mesFim = String(d.getMonth() + 1).padStart(2, '0');
+    const diaFim = String(d.getDate()).padStart(2, '0');
+    return `${anoFim}${mesFim}${diaFim}`;
+  }
+  return dataIso.replace(/-/g, '');
+}
+
+// Gera a URL direta do Google Calendar para abrir em nova aba
+function gerarLinkTemplateCalendar(tarefa: Tarefa): string {
+  if (!tarefa.dataVencimento) return '#';
+
+  const titulo = encodeURIComponent(tarefa.texto);
+  const detalhes = encodeURIComponent('Tarefa do My Checklist: ' + tarefa.texto);
+  const dataLimpa = tarefa.dataVencimento.replace(/-/g, '');
+
+  let datasParam = '';
+
+  if (tarefa.horarioVencimento) {
+    const [horaStr, minutoStr] = tarefa.horarioVencimento.split(':');
+    const hora = parseInt(horaStr, 10) || 0;
+    const minuto = parseInt(minutoStr, 10) || 0;
+    const horaInicio = `${String(hora).padStart(2, '0')}${String(minuto).padStart(2, '0')}00`;
+
+    let horaFimNum = hora + 1;
+    let dataFimLimpa = dataLimpa;
+    if (horaFimNum >= 24) {
+      horaFimNum = 0;
+      dataFimLimpa = calcularDiaSeguinteIso(tarefa.dataVencimento);
+    }
+    const horaFim = `${String(horaFimNum).padStart(2, '0')}${String(minuto).padStart(2, '0')}00`;
+
+    datasParam = `${dataLimpa}T${horaInicio}/${dataFimLimpa}T${horaFim}`;
+  } else {
+    const dataFim = calcularDiaSeguinteIso(tarefa.dataVencimento);
+    datasParam = `${dataLimpa}/${dataFim}`;
+  }
+
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${titulo}&dates=${datasParam}&details=${detalhes}`;
 }
 
 // Carrega as tarefas salvas do localStorage ou cria as tarefas de exemplo
@@ -95,7 +148,6 @@ function carregarTarefasIniciais(): Tarefa[] {
     console.error('Erro ao ler tarefas do localStorage:', erro);
   }
 
-  // Exemplos iniciais caso seja o primeiro acesso
   const hoje = new Date();
   const hojeIso = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
 
@@ -108,14 +160,14 @@ function carregarTarefasIniciais(): Tarefa[] {
       id: 1,
       texto: 'Aprender a estrutura básica do HTML',
       concluida: false,
-      dataVencimento: hojeIso, // Vence no dia (Vermelho)
-      horarioVencimento: '14:00', // Horário de exemplo
+      dataVencimento: hojeIso,
+      horarioVencimento: '14:00',
     },
     {
       id: 2,
       texto: 'Construir projetos interativos com React e TypeScript',
       concluida: false,
-      dataVencimento: dataFuturaIso, // Ainda não está para vencer (Azul Marinho)
+      dataVencimento: dataFuturaIso,
       horarioVencimento: '10:30',
     },
     {
@@ -129,13 +181,25 @@ function carregarTarefasIniciais(): Tarefa[] {
 }
 
 export default function App() {
-  // Estado para armazenar a lista com todas as tarefas cadastradas (iniciado com localStorage)
+  // Lista com todas as tarefas cadastradas
   const [listaDeTarefas, setListaDeTarefas] = useState<Tarefa[]>(carregarTarefasIniciais);
+
+  // Estados de autenticação com a conta Google (OAuth)
+  const [usuarioGoogle, setUsuarioGoogle] = useState<User | null>(null);
+  const [estaConectandoGoogle, setEstaConectandoGoogle] = useState<boolean>(false);
+  const [mensagemFeedback, setMensagemFeedback] = useState<{
+    tipo: 'sucesso' | 'erro';
+    texto: string;
+  } | null>(null);
+
+  // Estados para diálogo de confirmação de sincronização no Calendar (Regra obrigatória de mutação)
+  const [tarefaParaSincronizar, setTarefaParaSincronizar] = useState<Tarefa | null>(null);
+  const [estaSincronizando, setEstaSincronizando] = useState<boolean>(false);
 
   // Estados para o formulário de cadastro de nova tarefa
   const [textoDaNovaTarefa, setTextoDaNovaTarefa] = useState<string>('');
-  const [dataDaNovaTarefa, setDataDaNovaTarefa] = useState<string>(''); // Data opcional
-  const [horarioDaNovaTarefa, setHorarioDaNovaTarefa] = useState<string>(''); // Horário opcional
+  const [dataDaNovaTarefa, setDataDaNovaTarefa] = useState<string>('');
+  const [horarioDaNovaTarefa, setHorarioDaNovaTarefa] = useState<string>('');
   const [mensagemDeErro, setMensagemDeErro] = useState<string>('');
 
   // Estados para controlar a edição de uma tarefa
@@ -145,7 +209,20 @@ export default function App() {
   const [horarioEmEdicao, setHorarioEmEdicao] = useState<string>('');
   const [mensagemDeErroEdicao, setMensagemDeErroEdicao] = useState<string>('');
 
-  // 1. SALVAR AUTOMATICAMENTE: sempre que a lista mudar, grava no localStorage
+  // 1. Ouvinte do estado de autenticação Google
+  useEffect(() => {
+    const cancelarOuvinte = initAuth(
+      (user) => {
+        setUsuarioGoogle(user);
+      },
+      () => {
+        setUsuarioGoogle(null);
+      }
+    );
+    return () => cancelarOuvinte();
+  }, []);
+
+  // 2. SALVAR AUTOMATICAMENTE: sempre que a lista mudar, grava no localStorage
   useEffect(() => {
     try {
       localStorage.setItem(CHAVE_STORAGE, JSON.stringify(listaDeTarefas));
@@ -154,9 +231,95 @@ export default function App() {
     }
   }, [listaDeTarefas]);
 
-  // ==========================================
-  // 1. CRIAR (Create): Adicionar nova tarefa
-  // ==========================================
+  // Login com Google via Popup
+  async function handleLoginGoogle() {
+    setEstaConectandoGoogle(true);
+    setMensagemFeedback(null);
+    try {
+      const res = await googleSignIn();
+      if (res) {
+        setUsuarioGoogle(res.user);
+        setMensagemFeedback({
+          tipo: 'sucesso',
+          texto: `Conectado com sucesso como ${res.user.displayName || res.user.email}!`,
+        });
+      }
+    } catch (erro: any) {
+      console.error(erro);
+      setMensagemFeedback({
+        tipo: 'erro',
+        texto: erro?.message || 'Não foi possível concluir a autenticação com o Google.',
+      });
+    } finally {
+      setEstaConectandoGoogle(false);
+    }
+  }
+
+  // Logout da conta Google
+  async function handleLogoutGoogle() {
+    await logout();
+    setUsuarioGoogle(null);
+    setMensagemFeedback({
+      tipo: 'sucesso',
+      texto: 'Desconectado da conta Google com sucesso.',
+    });
+  }
+
+  // Abre o diálogo de confirmação para sincronizar evento no Google Agenda
+  function solicitarSincronizacao(tarefa: Tarefa) {
+    if (!usuarioGoogle) {
+      // Se ainda não conectou, pede login primeiro
+      handleLoginGoogle();
+      return;
+    }
+    setTarefaParaSincronizar(tarefa);
+  }
+
+  // Executa a criação real do evento no Google Calendar após confirmação expressa do usuário
+  async function confirmarSincronizacao() {
+    if (!tarefaParaSincronizar || !tarefaParaSincronizar.dataVencimento) return;
+
+    setEstaSincronizando(true);
+    setMensagemFeedback(null);
+
+    try {
+      const resultado = await criarEventoNoGoogleCalendar({
+        titulo: tarefaParaSincronizar.texto,
+        dataIso: tarefaParaSincronizar.dataVencimento,
+        horario: tarefaParaSincronizar.horarioVencimento,
+        detalhes: 'Tarefa cadastrada no My Checklist',
+      });
+
+      // Atualiza a tarefa marcando como sincronizada e salvando o link do evento
+      const listaAtualizada = listaDeTarefas.map((t) => {
+        if (t.id === tarefaParaSincronizar.id) {
+          return {
+            ...t,
+            sincronizadaCalendar: true,
+            linkGoogleCalendar: resultado.htmlLink,
+          };
+        }
+        return t;
+      });
+
+      setListaDeTarefas(listaAtualizada);
+      setMensagemFeedback({
+        tipo: 'sucesso',
+        texto: `Evento "${tarefaParaSincronizar.texto}" adicionado com sucesso à sua Google Agenda!`,
+      });
+      setTarefaParaSincronizar(null);
+    } catch (erro: any) {
+      console.error('Erro na sincronização:', erro);
+      setMensagemFeedback({
+        tipo: 'erro',
+        texto: erro?.message || 'Erro ao sincronizar com a Google Agenda.',
+      });
+    } finally {
+      setEstaSincronizando(false);
+    }
+  }
+
+  // Adicionar nova tarefa
   function adicionarTarefa(evento?: React.FormEvent) {
     if (evento) {
       evento.preventDefault();
@@ -164,7 +327,6 @@ export default function App() {
 
     const textoLimpo = textoDaNovaTarefa.trim();
 
-    // Validação: não permite campo vazio ou somente espaços
     if (textoLimpo === '') {
       setMensagemDeErro('Por favor, digite o nome de uma tarefa antes de adicionar!');
       return;
@@ -179,17 +341,13 @@ export default function App() {
     };
 
     setListaDeTarefas([...listaDeTarefas, novaTarefa]);
-
-    // Limpa os campos
     setTextoDaNovaTarefa('');
     setDataDaNovaTarefa('');
     setHorarioDaNovaTarefa('');
     setMensagemDeErro('');
   }
 
-  // ==========================================
-  // 2. ATUALIZAR (Update): Alternar status da tarefa
-  // ==========================================
+  // Alternar status
   function alternarStatusTarefa(idParaAlterar: number) {
     const listaAtualizada = listaDeTarefas.map((tarefa) => {
       if (tarefa.id === idParaAlterar) {
@@ -204,9 +362,7 @@ export default function App() {
     setListaDeTarefas(listaAtualizada);
   }
 
-  // ==========================================
-  // 3. ATUALIZAR (Update): Edição da tarefa
-  // ==========================================
+  // Iniciar e salvar edição
   function iniciarEdicao(tarefa: Tarefa) {
     setIdEmEdicao(tarefa.id);
     setTextoEmEdicao(tarefa.texto);
@@ -251,14 +407,11 @@ export default function App() {
     setMensagemDeErroEdicao('');
   }
 
-  // ==========================================
-  // 4. EXCLUIR (Delete): Remover tarefa
-  // ==========================================
+  // Remover tarefa
   function removerTarefa(idParaRemover: number) {
     if (idEmEdicao === idParaRemover) {
       cancelarEdicao();
     }
-
     const listaAtualizada = listaDeTarefas.filter((tarefa) => tarefa.id !== idParaRemover);
     setListaDeTarefas(listaAtualizada);
   }
@@ -271,7 +424,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col items-center py-10 px-4">
       {/* Cabeçalho */}
-      <header className="w-full max-w-xl text-center mb-8">
+      <header className="w-full max-w-xl text-center mb-6">
         <div className="inline-flex items-center justify-center p-3 bg-blue-100 text-blue-900 rounded-2xl mb-3 shadow-sm">
           <ListTodo className="w-8 h-8" />
         </div>
@@ -279,13 +432,113 @@ export default function App() {
           My Checklist
         </h1>
         <p className="text-sm text-slate-600 mt-2">
-          Gerencie suas tarefas com datas, horários, legendas coloridas e salvamento automático.
+          Gerencie suas tarefas com datas, horários e sincronização direta na Google Agenda.
         </p>
       </header>
 
+      {/* Barra de Integração com Google Agenda (Opção B) */}
+      <section className="w-full max-w-xl mb-6 bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center shrink-0">
+              <Calendar className="w-5 h-5 text-blue-600" />
+            </div>
+            <div className="text-left">
+              <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
+                Google Agenda
+                {usuarioGoogle ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Conectado
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-medium text-slate-500">
+                    (Desconectado)
+                  </span>
+                )}
+              </h2>
+              <p className="text-xs text-slate-600 mt-0.5">
+                {usuarioGoogle
+                  ? `Sessão ativa: ${usuarioGoogle.displayName || usuarioGoogle.email}`
+                  : 'Conecte sua conta para sincronizar tarefas com 1 clique.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="shrink-0 w-full sm:w-auto">
+            {usuarioGoogle ? (
+              <button
+                type="button"
+                onClick={handleLogoutGoogle}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-medium rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Desconectar</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleLoginGoogle}
+                disabled={estaConectandoGoogle}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl bg-white hover:bg-slate-50 active:bg-slate-100 border border-slate-300 text-slate-800 shadow-xs transition cursor-pointer disabled:opacity-50"
+              >
+                {estaConectandoGoogle ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                    <span>Conectando...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" viewBox="0 0 24 24">
+                      <path
+                        fill="#4285F4"
+                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                      />
+                      <path
+                        fill="#EA4335"
+                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                      />
+                    </svg>
+                    <span>Fazer Login com Google</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Feedback de sucesso ou erro da integração */}
+        {mensagemFeedback && (
+          <div
+            className={`mt-3 flex items-center justify-between gap-2 text-xs px-3 py-2 rounded-xl border ${
+              mensagemFeedback.tipo === 'sucesso'
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                : 'bg-red-50 text-red-800 border-red-200'
+            }`}
+          >
+            <span>{mensagemFeedback.texto}</span>
+            <button
+              type="button"
+              onClick={() => setMensagemFeedback(null)}
+              className="text-slate-500 hover:text-slate-700 cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+      </section>
+
       {/* Cartão Principal */}
       <main className="w-full max-w-xl bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
-        {/* Formulário para adicionar nova tarefa com campos opcionais de data e horário */}
+        {/* Formulário para adicionar nova tarefa */}
         <section className="p-6 border-b border-slate-100 bg-slate-50/50">
           <form onSubmit={adicionarTarefa} className="flex flex-col gap-3">
             <div className="flex flex-col md:flex-row gap-3">
@@ -308,7 +561,6 @@ export default function App() {
 
               {/* Campos opcionais de data e horário + botão Adicionar */}
               <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
-                {/* Data de vencimento */}
                 <div className="flex-1 sm:flex-initial">
                   <label htmlFor="campo-data" className="sr-only">
                     Data de vencimento (opcional)
@@ -323,7 +575,6 @@ export default function App() {
                   />
                 </div>
 
-                {/* Horário de vencimento */}
                 <div className="flex-1 sm:flex-initial">
                   <label htmlFor="campo-horario" className="sr-only">
                     Horário (opcional)
@@ -349,7 +600,6 @@ export default function App() {
             </div>
           </form>
 
-          {/* Mensagem de validação de campo vazio */}
           {mensagemDeErro && (
             <div className="flex items-center gap-2 mt-3 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -373,19 +623,16 @@ export default function App() {
             </span>
 
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs">
-              {/* Vence no dia e no dia seguinte (Vermelho) */}
               <div className="inline-flex items-center gap-1.5 font-medium text-red-700">
                 <span className="w-3 h-3 rounded-full bg-red-600 ring-2 ring-red-100 shrink-0" />
                 <span>Vence no dia e no dia seguinte (Vermelho)</span>
               </div>
 
-              {/* Ainda não está para vencer (Azul Marinho) */}
               <div className="inline-flex items-center gap-1.5 font-semibold text-blue-950">
                 <span className="w-3 h-3 rounded-full bg-blue-900 ring-2 ring-blue-200 shrink-0" />
                 <span>Ainda não está para vencer (Azul Marinho)</span>
               </div>
 
-              {/* Concluída (Cinza) */}
               <div className="inline-flex items-center gap-1.5 font-medium text-slate-600">
                 <span className="w-3 h-3 rounded-full bg-slate-400 ring-2 ring-slate-200 shrink-0" />
                 <span>Concluída (Cinza)</span>
@@ -415,23 +662,15 @@ export default function App() {
                 const estaSendoEditada = idEmEdicao === tarefa.id;
                 const situacao = calcularSituacaoVencimento(tarefa.dataVencimento);
 
-                // Situações de vencimento:
-                // 1. Vence no dia / atrasada / no dia seguinte -> VERMELHO
                 const ehVenceNoDiaOuDiaSeguinte =
                   !tarefa.concluida &&
                   (situacao.tipo === 'hoje' ||
                     situacao.tipo === 'atrasada' ||
                     situacao.tipo === 'amanha');
 
-                // 2. Ainda não está para vencer (data futura) -> AZUL MARINHO
                 const ehAindaNaoEstaParaVencer =
                   !tarefa.concluida && situacao.tipo === 'a_vencer';
 
-                // Definição das cores e bordas conforme o estado da tarefa:
-                // - Concluída: CINZA (mesmo com data passada)
-                // - Pendente que vence no dia ou no dia seguinte: VERMELHO
-                // - Pendente que ainda não está para vencer: AZUL MARINHO
-                // - Pendente sem data: COR PADRÃO
                 let classesDoCard = 'p-4 rounded-xl border transition shadow-xs ';
                 if (tarefa.concluida) {
                   classesDoCard += 'bg-slate-100/90 border-slate-300 hover:border-slate-400 opacity-80';
@@ -466,7 +705,6 @@ export default function App() {
                           />
 
                           <div className="flex items-center gap-2">
-                            {/* Data de vencimento na edição */}
                             <input
                               type="date"
                               value={dataEmEdicao}
@@ -475,7 +713,6 @@ export default function App() {
                               title="Data de vencimento (opcional)"
                             />
 
-                            {/* Horário na edição */}
                             <input
                               type="time"
                               value={horarioEmEdicao}
@@ -551,7 +788,7 @@ export default function App() {
                           </button>
 
                           <div className="flex flex-col flex-1 min-w-0">
-                            {/* Texto da tarefa: riscado e cinza quando concluída */}
+                            {/* Texto da tarefa: riscado quando concluída */}
                             <span
                               className={`text-sm sm:text-base break-words transition-all duration-200 ${
                                 tarefa.concluida
@@ -595,6 +832,14 @@ export default function App() {
                                 </span>
                               )}
 
+                              {/* Indicação se já foi sincronizada na agenda */}
+                              {tarefa.sincronizadaCalendar && (
+                                <span className="inline-flex items-center gap-1 text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md">
+                                  <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                  Sincronizado na Agenda
+                                </span>
+                              )}
+
                               {/* Exibição da Data de Vencimento e Horário */}
                               {(tarefa.dataVencimento || tarefa.horarioVencimento) && (
                                 <span
@@ -627,7 +872,45 @@ export default function App() {
                         </div>
 
                         {/* Ações da Tarefa */}
-                        <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                        <div className="flex flex-wrap items-center gap-2 self-end sm:self-center shrink-0">
+                          {/* Botão Sincronizar na Google Agenda (Opção B - API Oficial) */}
+                          {tarefa.dataVencimento && !tarefa.concluida && (
+                            <button
+                              type="button"
+                              onClick={() => solicitarSincronizacao(tarefa)}
+                              className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border transition cursor-pointer ${
+                                tarefa.sincronizadaCalendar
+                                  ? 'border-emerald-200 text-emerald-800 bg-emerald-50 hover:bg-emerald-100'
+                                  : 'border-blue-200 text-blue-700 bg-blue-50/70 hover:bg-blue-100'
+                              }`}
+                              title={
+                                usuarioGoogle
+                                  ? 'Sincronizar evento na Google Agenda'
+                                  : 'Conectar Google para sincronizar'
+                              }
+                            >
+                              <CalendarPlus className="w-3.5 h-3.5 text-blue-600" />
+                              <span>
+                                {tarefa.sincronizadaCalendar
+                                  ? 'Atualizar na Agenda'
+                                  : 'Sincronizar Agenda'}
+                              </span>
+                            </button>
+                          )}
+
+                          {/* Link rápido de abertura direta no Google Agenda */}
+                          {tarefa.dataVencimento && (
+                            <a
+                              href={gerarLinkTemplateCalendar(tarefa)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                              title="Abrir no Google Agenda em nova aba"
+                            >
+                              <span>Abrir</span>
+                            </a>
+                          )}
+
                           {/* Botão Editar */}
                           <button
                             type="button"
@@ -675,10 +958,82 @@ export default function App() {
         </section>
       </main>
 
+      {/* Modal de Confirmação Obrigatório antes de criar evento na Google Agenda (Regra de proteção de dados) */}
+      {tarefaParaSincronizar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2.5 bg-blue-100 text-blue-700 rounded-xl">
+                <CalendarPlus className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Adicionar à Google Agenda
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Confirmação com a sua permissão
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-slate-700 mb-4">
+              Você confirma a criação do seguinte evento na sua Google Agenda vinculada à conta{' '}
+              <strong>{usuarioGoogle?.displayName || usuarioGoogle?.email}</strong>?
+            </p>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 mb-6 text-xs text-slate-700 space-y-1.5">
+              <p>
+                <strong>Título:</strong> {tarefaParaSincronizar.texto}
+              </p>
+              <p>
+                <strong>Data:</strong>{' '}
+                {formatarDataParaExibicao(tarefaParaSincronizar.dataVencimento)}
+              </p>
+              <p>
+                <strong>Horário:</strong>{' '}
+                {tarefaParaSincronizar.horarioVencimento
+                  ? `às ${tarefaParaSincronizar.horarioVencimento}`
+                  : 'Evento de dia inteiro'}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setTarefaParaSincronizar(null)}
+                disabled={estaSincronizando}
+                className="px-4 py-2 text-xs font-medium rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 transition cursor-pointer disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                onClick={confirmarSincronizacao}
+                disabled={estaSincronizando}
+                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-xs transition cursor-pointer disabled:opacity-50"
+              >
+                {estaSincronizando ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Sincronizando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Confirmar e Criar Evento</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Rodapé Didático */}
       <footer className="w-full max-w-xl text-center mt-6 text-xs text-slate-500">
         <p>
-          💾 Dados salvos automaticamente no seu navegador via <code className="bg-slate-200 px-1 py-0.5 rounded text-slate-700 font-mono">localStorage</code>.
+          💾 Dados salvos no seu navegador (<code className="bg-slate-200 px-1 py-0.5 rounded text-slate-700 font-mono">localStorage</code>) com integração à Google Agenda.
         </p>
       </footer>
     </div>

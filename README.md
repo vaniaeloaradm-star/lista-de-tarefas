@@ -20,6 +20,10 @@ Este projeto demonstra como construir uma interface web reativa e intuitiva util
   - 🔵 **Azul Marinho:** tarefas pendentes que **ainda não estão para vencer** (com prazo futuro garantido).
   - 🔘 **Cinza:** tarefas **concluídas**, com texto riscado e status "Concluída", mesmo que a data já tenha passado.
   - ⚪ **Padrão:** tarefas sem data de vencimento definida.
+- **Integração com Google Agenda (Opção B - Direta & Opção A - Link Rápido):**
+  - **Login com Google:** Conecte sua conta do Google de forma segura para criar eventos diretamente no seu Google Calendar.
+  - **Sincronização Direta:** Criação automática de eventos no Google Calendar com confirmação prévia para total segurança.
+  - **Link Rápido:** Atalho para abrir o evento pré-preenchido no Google Agenda em nova aba quando preferir salvar manualmente.
 - **Editar Tarefa com Data e Horário (ATUALIZAR):** Altere o texto, a data e o horário com os botões **Salvar** e **Cancelar**.
 - **Marcar como Concluída / Pendente (ATUALIZAR):** Ao concluir, a tarefa fica cinza e com texto riscado; ao desmarcar, a cor e os avisos são recalculados automaticamente com base na data.
 - **Remover Tarefa (EXCLUIR):** Exclua tarefas individualmente clicando no botão **Remover**.
@@ -31,6 +35,7 @@ Este projeto demonstra como construir uma interface web reativa e intuitiva util
 
 - **React 19:** Biblioteca para construção da interface de usuário baseada em componentes e gerenciamento de estado.
 - **TypeScript:** Superset do JavaScript que adiciona tipagem estática, ajudando a evitar erros comuns de digitação e tipos.
+- **Firebase Auth & Google Calendar API v3:** Autenticação OAuth 2.0 segura e comunicação com os serviços de calendário do Google.
 - **Tailwind CSS 4:** Framework CSS utilitário para estilização rápida, responsiva e limpa.
 - **Lucide React:** Conjunto de ícones leves e elegantes.
 - **Vite:** Ferramenta moderna e ultra rápida para desenvolvimento e compilação no navegador.
@@ -45,6 +50,9 @@ Este projeto demonstra como construir uma interface web reativa e intuitiva util
 ├── README.md           # Documentação do projeto (este arquivo)
 ├── src/
 │   ├── App.tsx         # Componente principal: lógica, estados e interface da lista
+│   ├── services/
+│   │   ├── googleAuth.ts     # Autenticação Google via Firebase OAuth e escopo Calendar
+│   │   └── googleCalendar.ts # Chamadas à API v3 do Google Calendar para criar eventos
 │   ├── index.css       # Estilos globais e importação do Tailwind CSS
 │   └── main.tsx        # Arquivo de inicialização que conecta o React ao index.html
 ├── tsconfig.json       # Configurações do compilador TypeScript
