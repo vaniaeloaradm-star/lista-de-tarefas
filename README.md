@@ -12,13 +12,18 @@ Este projeto demonstra como construir uma interface web reativa e intuitiva util
 
 ## ✨ Funcionalidades
 
-- **Adicionar Tarefa (CRIAR):** Digite o nome da tarefa e clique em **Adicionar** (ou pressione a tecla `Enter`).
-- **Visualizar Lista (VISUALIZAR):** Exibe as tarefas com indicação explícita de status (Pendente ou Concluída).
-- **Editar Tarefa (ATUALIZAR):** Clique no botão **Editar** para abrir o campo de edição com os botões **Salvar** e **Cancelar**. O salvamento valida campos vazios e preserva o status e o texto riscado das tarefas concluídas.
-- **Marcar como Concluída / Pendente (ATUALIZAR):** Alterne o status de qualquer tarefa clicando no ícone de círculo ou no botão de status.
-- **Texto Riscado para Tarefas Concluídas:** Apenas as tarefas marcadas como concluídas recebem o efeito visual de texto tachado (`line-through`) e cor suavizada.
+- **Adicionar Tarefa com Data Opcional (CRIAR):** Digite o nome da tarefa e, opcionalmente, escolha uma data de vencimento.
+- **Salvamento Automático (`localStorage`):** Todas as tarefas, status e datas ficam salvas no navegador e são restauradas ao reabrir a página.
+- **Data de Vencimento no formato `DD/MM/AAAA`:** Exibição clara da data com ícone de calendário.
+- **Legenda de Cores Inteligente:**
+  - 🔴 **Vermelho:** tarefas pendentes que **vencem no dia** (ou atrasadas / com atenção imediata).
+  - 🔵 **Azul Marinho:** tarefas pendentes que **ainda não estão para vencer** (com prazo futuro garantido).
+  - 🟢 **Verde:** tarefas **concluídas**, com texto riscado e status "Concluída", mesmo que a data já tenha passado.
+  - ⚪ **Padrão:** tarefas sem data de vencimento definida.
+- **Editar Tarefa com Data (ATUALIZAR):** Altere tanto o texto quanto a data de vencimento com os botões **Salvar** e **Cancelar**.
+- **Marcar como Concluída / Pendente (ATUALIZAR):** Ao concluir, a tarefa fica verde e com texto riscado; ao desmarcar, a cor e os avisos são recalculados automaticamente com base na data.
 - **Remover Tarefa (EXCLUIR):** Exclua tarefas individualmente clicando no botão **Remover**.
-- **Contadores em Tempo Real:** Acompanhe a quantidade total de tarefas cadastradas, quantas estão pendentes e quantas já foram concluídas.
+- **Contadores em Tempo Real:** Total de tarefas, pendentes e concluídas.
 
 ---
 
