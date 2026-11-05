@@ -16,6 +16,8 @@ import {
   LogOut,
   CheckCheck,
   Loader2,
+  ExternalLink,
+  HelpCircle,
 } from 'lucide-react';
 import type { User } from 'firebase/auth';
 import { initAuth, googleSignIn, logout } from './services/googleAuth';
@@ -187,6 +189,7 @@ export default function App() {
   // Estados de autenticação com a conta Google (OAuth)
   const [usuarioGoogle, setUsuarioGoogle] = useState<User | null>(null);
   const [estaConectandoGoogle, setEstaConectandoGoogle] = useState<boolean>(false);
+  const [mostrarAjudaDominio, setMostrarAjudaDominio] = useState<boolean>(false);
   const [mensagemFeedback, setMensagemFeedback] = useState<{
     tipo: 'sucesso' | 'erro';
     texto: string;
@@ -239,17 +242,33 @@ export default function App() {
       const res = await googleSignIn();
       if (res) {
         setUsuarioGoogle(res.user);
+        setMostrarAjudaDominio(false);
         setMensagemFeedback({
           tipo: 'sucesso',
           texto: `Conectado com sucesso como ${res.user.displayName || res.user.email}!`,
         });
       }
     } catch (erro: any) {
-      console.error(erro);
-      setMensagemFeedback({
-        tipo: 'erro',
-        texto: erro?.message || 'Não foi possível concluir a autenticação com o Google.',
-      });
+      console.error('Erro ao realizar login Google:', erro);
+      const codigoErro = erro?.code || '';
+
+      if (codigoErro === 'auth/unauthorized-domain' || erro?.message?.includes('auth/unauthorized-domain')) {
+        setMostrarAjudaDominio(true);
+        setMensagemFeedback({
+          tipo: 'erro',
+          texto: `O endereço "${window.location.hostname}" precisa ser adicionado aos Domínios Autorizados no Firebase para habilitar o login popup. Veja as instruções abaixo ou use o botão "Adicionar à Agenda" diretamente!`,
+        });
+      } else if (codigoErro === 'auth/popup-closed-by-user') {
+        setMensagemFeedback({
+          tipo: 'erro',
+          texto: 'A janela de login com a conta Google foi fechada antes de concluir.',
+        });
+      } else {
+        setMensagemFeedback({
+          tipo: 'erro',
+          texto: erro?.message || 'Não foi possível concluir a autenticação com o Google.',
+        });
+      }
     } finally {
       setEstaConectandoGoogle(false);
     }
@@ -452,15 +471,24 @@ export default function App() {
                     Conectado
                   </span>
                 ) : (
-                  <span className="text-[11px] font-medium text-slate-500">
-                    (Desconectado)
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
+                    <span>(Desconectado)</span>
+                    <button
+                      type="button"
+                      onClick={() => setMostrarAjudaDominio(!mostrarAjudaDominio)}
+                      className="text-blue-600 hover:text-blue-800 underline inline-flex items-center gap-0.5 cursor-pointer"
+                      title="Como funciona o login no GitHub Pages"
+                    >
+                      <HelpCircle className="w-3 h-3" />
+                      <span>Ajuda login</span>
+                    </button>
                   </span>
                 )}
               </h2>
               <p className="text-xs text-slate-600 mt-0.5">
                 {usuarioGoogle
                   ? `Sessão ativa: ${usuarioGoogle.displayName || usuarioGoogle.email}`
-                  : 'Conecte sua conta para sincronizar tarefas com 1 clique.'}
+                  : 'Faça login para sincronização direta ou use o botão "Adicionar à Agenda" abaixo.'}
               </p>
             </div>
           </div>
@@ -518,20 +546,74 @@ export default function App() {
         {/* Feedback de sucesso ou erro da integração */}
         {mensagemFeedback && (
           <div
-            className={`mt-3 flex items-center justify-between gap-2 text-xs px-3 py-2 rounded-xl border ${
+            className={`mt-3 flex items-start justify-between gap-2 text-xs px-3.5 py-2.5 rounded-xl border ${
               mensagemFeedback.tipo === 'sucesso'
                 ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                : 'bg-red-50 text-red-800 border-red-200'
+                : 'bg-red-50 text-red-900 border-red-200'
             }`}
           >
-            <span>{mensagemFeedback.texto}</span>
+            <span className="leading-relaxed">{mensagemFeedback.texto}</span>
             <button
               type="button"
               onClick={() => setMensagemFeedback(null)}
-              className="text-slate-500 hover:text-slate-700 cursor-pointer"
+              className="text-slate-500 hover:text-slate-700 cursor-pointer shrink-0 mt-0.5"
             >
               <X className="w-3.5 h-3.5" />
             </button>
+          </div>
+        )}
+
+        {/* Guia explicativo passo a passo para o erro auth/unauthorized-domain */}
+        {mostrarAjudaDominio && (
+          <div className="mt-3 p-4 bg-amber-50/90 border border-amber-200 rounded-xl text-xs text-amber-950">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-bold text-amber-950 text-xs">
+                    Como liberar o login com a conta Google no GitHub Pages:
+                  </h3>
+                  <p className="mt-1 text-amber-900 leading-relaxed">
+                    O Firebase bloqueia tentativas de login vindas de domínios desconhecidos por motivo de segurança. Para permitir o login direto no seu endereço:
+                  </p>
+                  <ol className="list-decimal ml-4 mt-2 space-y-1.5 text-amber-900">
+                    <li>
+                      Abra o{' '}
+                      <a
+                        href="https://console.firebase.google.com/project/gen-lang-client-0627195686/authentication/settings"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold underline text-blue-700 hover:text-blue-900"
+                      >
+                        Console do Firebase (Configurações de Autenticação)
+                      </a>.
+                    </li>
+                    <li>
+                      Desça até a seção <strong>Domínios autorizados (Authorized domains)</strong> e clique no botão <strong>Adicionar domínio</strong>.
+                    </li>
+                    <li>
+                      Adicione o domínio do seu GitHub Pages:{' '}
+                      <code className="bg-white px-2 py-0.5 rounded border border-amber-300 font-mono font-bold text-amber-950">
+                        vestma.github.io
+                      </code>{' '}
+                      e salve.
+                    </li>
+                  </ol>
+                  <div className="mt-3 p-2.5 bg-amber-100/70 border border-amber-300/60 rounded-lg text-amber-900">
+                    💡 <strong>Não quer configurar o Firebase?</strong> Não se preocupe! Você não precisa fazer login. Todas as suas tarefas com data têm o botão <strong>&quot;Adicionar à Agenda&quot;</strong> que abre o Google Agenda com tudo preenchido e pronto para salvar em 1 clique!
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setMostrarAjudaDominio(false)}
+                className="text-amber-700 hover:text-amber-950 cursor-pointer shrink-0"
+                title="Fechar ajuda"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
       </section>
@@ -883,40 +965,40 @@ export default function App() {
                         <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3 border-t border-slate-200/80">
                           {/* Grupo da Google Agenda */}
                           <div className="flex flex-wrap items-center gap-1.5">
-                            {tarefa.dataVencimento && !tarefa.concluida && (
+                            {/* Botão Universal: Adicionar à Google Agenda (funciona diretamente no GitHub Pages sem precisar de login) */}
+                            {tarefa.dataVencimento && (
+                              <a
+                                href={gerarLinkTemplateCalendar(tarefa)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-blue-200 text-blue-700 bg-blue-50/80 hover:bg-blue-100 transition cursor-pointer"
+                                title="Abrir o Google Agenda com data e tarefa já preenchidas para salvar"
+                              >
+                                <CalendarPlus className="w-3.5 h-3.5 text-blue-600" />
+                                <span>Adicionar à Agenda</span>
+                                <ExternalLink className="w-3 h-3 text-blue-500" />
+                              </a>
+                            )}
+
+                            {/* Botão de Sincronização Direta com 1 Clique (disponível quando a conta Google estiver conectada) */}
+                            {tarefa.dataVencimento && !tarefa.concluida && usuarioGoogle && (
                               <button
                                 type="button"
                                 onClick={() => solicitarSincronizacao(tarefa)}
                                 className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition cursor-pointer ${
                                   tarefa.sincronizadaCalendar
                                     ? 'border-emerald-300 text-emerald-800 bg-emerald-50 hover:bg-emerald-100'
-                                    : 'border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100'
+                                    : 'border-blue-300 text-blue-700 bg-white hover:bg-blue-50'
                                 }`}
-                                title={
-                                  usuarioGoogle
-                                    ? 'Sincronizar evento na Google Agenda'
-                                    : 'Conectar Google para sincronizar'
-                                }
+                                title="Sincronizar evento automaticamente na Google Agenda"
                               >
-                                <CalendarPlus className="w-3.5 h-3.5 text-blue-600" />
+                                <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
                                 <span>
                                   {tarefa.sincronizadaCalendar
                                     ? 'Atualizar na Agenda'
-                                    : 'Sincronizar Agenda'}
+                                    : 'Sincronizar (1-Clique)'}
                                 </span>
                               </button>
-                            )}
-
-                            {tarefa.dataVencimento && (
-                              <a
-                                href={gerarLinkTemplateCalendar(tarefa)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 bg-white transition cursor-pointer"
-                                title="Abrir pré-preenchido no Google Agenda em nova aba"
-                              >
-                                <span>Abrir</span>
-                              </a>
                             )}
                           </div>
 
