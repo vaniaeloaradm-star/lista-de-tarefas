@@ -3,9 +3,10 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
 
-export default defineConfig(() => {
+export default defineConfig(({ command }) => {
   return {
-    base: '/lista-de-tarefas/',
+    // No build para o GitHub Pages usa o subcaminho; no desenvolvimento local usa a raiz
+    base: command === 'build' ? '/lista-de-tarefas/' : '/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
