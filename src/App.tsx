@@ -20,6 +20,7 @@ interface Tarefa {
   texto: string;
   concluida: boolean;
   dataVencimento?: string; // Formato padrão "AAAA-MM-DD" ou vazio
+  horarioVencimento?: string; // Formato padrão "HH:MM" ou vazio
 }
 
 // Chave utilizada para persistência no localStorage
@@ -33,7 +34,7 @@ interface SituacaoVencimento {
   rotulo: string;
 }
 
-// Função auxiliar para calcular se uma data vence no dia, está atrasada, vence amanhã ou ainda não está para vencer
+// Função auxiliar para calcular se uma data vence no dia, no dia seguinte, está atrasada ou ainda não está para vencer
 // Baseada sempre na data local do aparelho do usuário
 function calcularSituacaoVencimento(dataIso?: string): SituacaoVencimento {
   if (!dataIso) {
@@ -47,7 +48,7 @@ function calcularSituacaoVencimento(dataIso?: string): SituacaoVencimento {
   const diaHoje = String(agora.getDate()).padStart(2, '0');
   const hojeIso = `${anoHoje}-${mesHoje}-${diaHoje}`;
 
-  // Obtém a data local de amanhã no formato AAAA-MM-DD
+  // Obtém a data local de amanhã (dia seguinte) no formato AAAA-MM-DD
   const dataAmanha = new Date(agora);
   dataAmanha.setDate(dataAmanha.getDate() + 1);
   const anoAmanha = dataAmanha.getFullYear();
@@ -62,10 +63,10 @@ function calcularSituacaoVencimento(dataIso?: string): SituacaoVencimento {
     return { tipo: 'hoje', rotulo: 'Vence no dia' };
   }
   if (dataIso === amanhaIso) {
-    return { tipo: 'amanha', rotulo: 'Vence amanhã' };
+    return { tipo: 'amanha', rotulo: 'Vence no dia seguinte' };
   }
 
-  // Data futura além de amanhã: ainda não está para vencer (Azul Marinho)
+  // Data futura além do dia seguinte: ainda não está para vencer (Azul Marinho)
   return { tipo: 'a_vencer', rotulo: 'Ainda não está para vencer' };
 }
 
@@ -94,7 +95,7 @@ function carregarTarefasIniciais(): Tarefa[] {
     console.error('Erro ao ler tarefas do localStorage:', erro);
   }
 
-  // Exemplos iniciais caso seja o primeiro acesso:
+  // Exemplos iniciais caso seja o primeiro acesso
   const hoje = new Date();
   const hojeIso = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
 
@@ -108,18 +109,21 @@ function carregarTarefasIniciais(): Tarefa[] {
       texto: 'Aprender a estrutura básica do HTML',
       concluida: false,
       dataVencimento: hojeIso, // Vence no dia (Vermelho)
+      horarioVencimento: '14:00', // Horário de exemplo
     },
     {
       id: 2,
       texto: 'Construir projetos interativos com React e TypeScript',
       concluida: false,
       dataVencimento: dataFuturaIso, // Ainda não está para vencer (Azul Marinho)
+      horarioVencimento: '10:30',
     },
     {
       id: 3,
       texto: 'Compreender como funcionam as variáveis e funções no JavaScript',
       concluida: true,
-      dataVencimento: '', // Concluída (Verde)
+      dataVencimento: '',
+      horarioVencimento: '',
     },
   ];
 }
@@ -131,12 +135,14 @@ export default function App() {
   // Estados para o formulário de cadastro de nova tarefa
   const [textoDaNovaTarefa, setTextoDaNovaTarefa] = useState<string>('');
   const [dataDaNovaTarefa, setDataDaNovaTarefa] = useState<string>(''); // Data opcional
+  const [horarioDaNovaTarefa, setHorarioDaNovaTarefa] = useState<string>(''); // Horário opcional
   const [mensagemDeErro, setMensagemDeErro] = useState<string>('');
 
   // Estados para controlar a edição de uma tarefa
   const [idEmEdicao, setIdEmEdicao] = useState<number | null>(null);
   const [textoEmEdicao, setTextoEmEdicao] = useState<string>('');
   const [dataEmEdicao, setDataEmEdicao] = useState<string>('');
+  const [horarioEmEdicao, setHorarioEmEdicao] = useState<string>('');
   const [mensagemDeErroEdicao, setMensagemDeErroEdicao] = useState<string>('');
 
   // 1. SALVAR AUTOMATICAMENTE: sempre que a lista mudar, grava no localStorage
@@ -168,7 +174,8 @@ export default function App() {
       id: Date.now(),
       texto: textoLimpo,
       concluida: false,
-      dataVencimento: dataDaNovaTarefa || '', // Salva data se fornecida
+      dataVencimento: dataDaNovaTarefa || '',
+      horarioVencimento: horarioDaNovaTarefa || '',
     };
 
     setListaDeTarefas([...listaDeTarefas, novaTarefa]);
@@ -176,6 +183,7 @@ export default function App() {
     // Limpa os campos
     setTextoDaNovaTarefa('');
     setDataDaNovaTarefa('');
+    setHorarioDaNovaTarefa('');
     setMensagemDeErro('');
   }
 
@@ -203,6 +211,7 @@ export default function App() {
     setIdEmEdicao(tarefa.id);
     setTextoEmEdicao(tarefa.texto);
     setDataEmEdicao(tarefa.dataVencimento || '');
+    setHorarioEmEdicao(tarefa.horarioVencimento || '');
     setMensagemDeErroEdicao('');
   }
 
@@ -210,6 +219,7 @@ export default function App() {
     setIdEmEdicao(null);
     setTextoEmEdicao('');
     setDataEmEdicao('');
+    setHorarioEmEdicao('');
     setMensagemDeErroEdicao('');
   }
 
@@ -227,6 +237,7 @@ export default function App() {
           ...tarefa,
           texto: textoLimpo,
           dataVencimento: dataEmEdicao || '',
+          horarioVencimento: horarioEmEdicao || '',
         };
       }
       return tarefa;
@@ -236,6 +247,7 @@ export default function App() {
     setIdEmEdicao(null);
     setTextoEmEdicao('');
     setDataEmEdicao('');
+    setHorarioEmEdicao('');
     setMensagemDeErroEdicao('');
   }
 
@@ -267,16 +279,16 @@ export default function App() {
           Lista Fan
         </h1>
         <p className="text-sm text-slate-600 mt-2">
-          Gerencie suas tarefas com datas de vencimento, legendas coloridas e salvamento automático.
+          Gerencie suas tarefas com datas, horários, legendas coloridas e salvamento automático.
         </p>
       </header>
 
       {/* Cartão Principal */}
       <main className="w-full max-w-xl bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
-        {/* Formulário para adicionar nova tarefa com campo de data opcional */}
+        {/* Formulário para adicionar nova tarefa com campos opcionais de data e horário */}
         <section className="p-6 border-b border-slate-100 bg-slate-50/50">
           <form onSubmit={adicionarTarefa} className="flex flex-col gap-3">
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col md:flex-row gap-3">
               <div className="flex-1">
                 <label htmlFor="campo-tarefa" className="sr-only">
                   Digite a sua tarefa
@@ -294,27 +306,41 @@ export default function App() {
                 />
               </div>
 
-              {/* Campo opcional de data de vencimento */}
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1 sm:flex-initial">
+              {/* Campos opcionais de data e horário + botão Adicionar */}
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+                {/* Data de vencimento */}
+                <div className="flex-1 sm:flex-initial">
                   <label htmlFor="campo-data" className="sr-only">
                     Data de vencimento (opcional)
                   </label>
-                  <div className="relative">
-                    <input
-                      id="campo-data"
-                      type="date"
-                      value={dataDaNovaTarefa}
-                      onChange={(evento) => setDataDaNovaTarefa(evento.target.value)}
-                      className="w-full sm:w-auto px-3 py-3 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition cursor-pointer"
-                      title="Data de vencimento (opcional)"
-                    />
-                  </div>
+                  <input
+                    id="campo-data"
+                    type="date"
+                    value={dataDaNovaTarefa}
+                    onChange={(evento) => setDataDaNovaTarefa(evento.target.value)}
+                    className="w-full px-3 py-3 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition cursor-pointer"
+                    title="Data de vencimento (opcional)"
+                  />
+                </div>
+
+                {/* Horário de vencimento */}
+                <div className="flex-1 sm:flex-initial">
+                  <label htmlFor="campo-horario" className="sr-only">
+                    Horário (opcional)
+                  </label>
+                  <input
+                    id="campo-horario"
+                    type="time"
+                    value={horarioDaNovaTarefa}
+                    onChange={(evento) => setHorarioDaNovaTarefa(evento.target.value)}
+                    className="w-full px-3 py-3 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition cursor-pointer"
+                    title="Horário (opcional)"
+                  />
                 </div>
 
                 <button
                   type="submit"
-                  className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-medium rounded-xl shadow-sm transition cursor-pointer shrink-0"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-medium rounded-xl shadow-sm transition cursor-pointer shrink-0"
                 >
                   <Plus className="w-5 h-5" />
                   <span>Adicionar</span>
@@ -347,10 +373,10 @@ export default function App() {
             </span>
 
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs">
-              {/* Vence no dia (Vermelho) */}
+              {/* Vence no dia e no dia seguinte (Vermelho) */}
               <div className="inline-flex items-center gap-1.5 font-medium text-red-700">
                 <span className="w-3 h-3 rounded-full bg-red-600 ring-2 ring-red-100 shrink-0" />
-                <span>Vence no dia (Vermelho)</span>
+                <span>Vence no dia e no dia seguinte (Vermelho)</span>
               </div>
 
               {/* Ainda não está para vencer (Azul Marinho) */}
@@ -390,8 +416,8 @@ export default function App() {
                 const situacao = calcularSituacaoVencimento(tarefa.dataVencimento);
 
                 // Situações de vencimento:
-                // 1. Vence no dia / atrasada / amanhã -> VERMELHO
-                const ehVenceNoDiaOuUrgente =
+                // 1. Vence no dia / atrasada / no dia seguinte -> VERMELHO
+                const ehVenceNoDiaOuDiaSeguinte =
                   !tarefa.concluida &&
                   (situacao.tipo === 'hoje' ||
                     situacao.tipo === 'atrasada' ||
@@ -403,13 +429,13 @@ export default function App() {
 
                 // Definição das cores e bordas conforme o estado da tarefa:
                 // - Concluída: VERDE (mesmo com data passada)
-                // - Pendente que vence no dia: VERMELHO
+                // - Pendente que vence no dia ou no dia seguinte: VERMELHO
                 // - Pendente que ainda não está para vencer: AZUL MARINHO
                 // - Pendente sem data: COR PADRÃO
                 let classesDoCard = 'p-4 rounded-xl border transition shadow-xs ';
                 if (tarefa.concluida) {
                   classesDoCard += 'bg-emerald-50/80 border-emerald-300 hover:border-emerald-400';
-                } else if (ehVenceNoDiaOuUrgente) {
+                } else if (ehVenceNoDiaOuDiaSeguinte) {
                   classesDoCard += 'bg-red-50/80 border-red-300 hover:border-red-400';
                 } else if (ehAindaNaoEstaParaVencer) {
                   classesDoCard += 'bg-blue-50/70 border-blue-900/30 hover:border-blue-900/50';
@@ -422,7 +448,7 @@ export default function App() {
                     {/* Modo de Edição */}
                     {estaSendoEditada ? (
                       <div className="flex flex-col gap-3">
-                        <div className="flex flex-col sm:flex-row gap-2">
+                        <div className="flex flex-col md:flex-row gap-2">
                           <input
                             type="text"
                             value={textoEmEdicao}
@@ -439,16 +465,25 @@ export default function App() {
                             placeholder="Edite o nome da tarefa..."
                           />
 
-                          {/* Data de vencimento na edição */}
-                          <input
-                            type="date"
-                            value={dataEmEdicao}
-                            onChange={(e) => setDataEmEdicao(e.target.value)}
-                            className="px-3 py-2 rounded-lg border border-blue-400 bg-white text-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                            title="Data de vencimento (opcional)"
-                          />
+                          <div className="flex items-center gap-2">
+                            {/* Data de vencimento na edição */}
+                            <input
+                              type="date"
+                              value={dataEmEdicao}
+                              onChange={(e) => setDataEmEdicao(e.target.value)}
+                              className="px-3 py-2 rounded-lg border border-blue-400 bg-white text-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                              title="Data de vencimento (opcional)"
+                            />
 
-                          <div className="flex items-center gap-2 shrink-0">
+                            {/* Horário na edição */}
+                            <input
+                              type="time"
+                              value={horarioEmEdicao}
+                              onChange={(e) => setHorarioEmEdicao(e.target.value)}
+                              className="px-3 py-2 rounded-lg border border-blue-400 bg-white text-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                              title="Horário (opcional)"
+                            />
+
                             <button
                               type="button"
                               onClick={() => salvarEdicao(tarefa.id)}
@@ -505,7 +540,7 @@ export default function App() {
                             ) : (
                               <Circle
                                 className={`w-5 h-5 ${
-                                  ehVenceNoDiaOuUrgente
+                                  ehVenceNoDiaOuDiaSeguinte
                                     ? 'text-red-500'
                                     : ehAindaNaoEstaParaVencer
                                     ? 'text-blue-900'
@@ -521,7 +556,7 @@ export default function App() {
                               className={`text-sm sm:text-base break-words transition-all duration-200 ${
                                 tarefa.concluida
                                   ? 'line-through text-slate-400'
-                                  : ehVenceNoDiaOuUrgente
+                                  : ehVenceNoDiaOuDiaSeguinte
                                   ? 'no-underline text-red-950 font-medium'
                                   : ehAindaNaoEstaParaVencer
                                   ? 'no-underline text-blue-950 font-medium'
@@ -531,7 +566,7 @@ export default function App() {
                               {tarefa.texto}
                             </span>
 
-                            {/* Informações de status, alertas e data */}
+                            {/* Informações de status, alertas, data e horário */}
                             <div className="flex flex-wrap items-center gap-2 mt-1.5">
                               {/* Tag de status principal */}
                               {tarefa.concluida ? (
@@ -539,7 +574,7 @@ export default function App() {
                                   <Check className="w-3 h-3" />
                                   Concluída
                                 </span>
-                              ) : ehVenceNoDiaOuUrgente ? (
+                              ) : ehVenceNoDiaOuDiaSeguinte ? (
                                 <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md bg-red-100 text-red-800 border border-red-200">
                                   {situacao.tipo === 'atrasada' ? (
                                     <AlertTriangle className="w-3 h-3 text-red-600" />
@@ -560,21 +595,31 @@ export default function App() {
                                 </span>
                               )}
 
-                              {/* Exibição da Data de Vencimento no formato DD/MM/AAAA */}
-                              {tarefa.dataVencimento && (
+                              {/* Exibição da Data de Vencimento e Horário */}
+                              {(tarefa.dataVencimento || tarefa.horarioVencimento) && (
                                 <span
-                                  className={`inline-flex items-center gap-1 text-xs ${
+                                  className={`inline-flex items-center gap-1.5 text-xs ${
                                     tarefa.concluida
                                       ? 'text-slate-400'
-                                      : ehVenceNoDiaOuUrgente
+                                      : ehVenceNoDiaOuDiaSeguinte
                                       ? 'text-red-700 font-medium'
                                       : ehAindaNaoEstaParaVencer
                                       ? 'text-blue-900 font-medium'
                                       : 'text-slate-500'
                                   }`}
                                 >
-                                  <Calendar className="w-3 h-3" />
-                                  Vencimento: {formatarDataParaExibicao(tarefa.dataVencimento)}
+                                  {tarefa.dataVencimento && (
+                                    <span className="inline-flex items-center gap-1">
+                                      <Calendar className="w-3 h-3" />
+                                      {formatarDataParaExibicao(tarefa.dataVencimento)}
+                                    </span>
+                                  )}
+                                  {tarefa.horarioVencimento && (
+                                    <span className="inline-flex items-center gap-1">
+                                      <Clock className="w-3 h-3" />
+                                      às {tarefa.horarioVencimento}
+                                    </span>
+                                  )}
                                 </span>
                               )}
                             </div>

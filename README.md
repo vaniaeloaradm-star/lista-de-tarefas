@@ -12,15 +12,15 @@ Este projeto demonstra como construir uma interface web reativa e intuitiva util
 
 ## ✨ Funcionalidades
 
-- **Adicionar Tarefa com Data Opcional (CRIAR):** Digite o nome da tarefa e, opcionalmente, escolha uma data de vencimento.
-- **Salvamento Automático (`localStorage`):** Todas as tarefas, status e datas ficam salvas no navegador e são restauradas ao reabrir a página.
-- **Data de Vencimento no formato `DD/MM/AAAA`:** Exibição clara da data com ícone de calendário.
+- **Adicionar Tarefa com Data e Horário Opcionais (CRIAR):** Digite o nome da tarefa e, opcionalmente, defina uma data e horário de vencimento.
+- **Salvamento Automático (`localStorage`):** Todas as tarefas, status, datas e horários ficam salvos no navegador.
+- **Data e Horário Formatados:** Exibição clara no padrão `DD/MM/AAAA às HH:MM`.
 - **Legenda de Cores Inteligente:**
-  - 🔴 **Vermelho:** tarefas pendentes que **vencem no dia** (ou atrasadas / com atenção imediata).
+  - 🔴 **Vermelho:** tarefas pendentes que **vencem no dia e no dia seguinte** (ou que já estão atrasadas).
   - 🔵 **Azul Marinho:** tarefas pendentes que **ainda não estão para vencer** (com prazo futuro garantido).
   - 🟢 **Verde:** tarefas **concluídas**, com texto riscado e status "Concluída", mesmo que a data já tenha passado.
   - ⚪ **Padrão:** tarefas sem data de vencimento definida.
-- **Editar Tarefa com Data (ATUALIZAR):** Altere tanto o texto quanto a data de vencimento com os botões **Salvar** e **Cancelar**.
+- **Editar Tarefa com Data e Horário (ATUALIZAR):** Altere o texto, a data e o horário com os botões **Salvar** e **Cancelar**.
 - **Marcar como Concluída / Pendente (ATUALIZAR):** Ao concluir, a tarefa fica verde e com texto riscado; ao desmarcar, a cor e os avisos são recalculados automaticamente com base na data.
 - **Remover Tarefa (EXCLUIR):** Exclua tarefas individualmente clicando no botão **Remover**.
 - **Contadores em Tempo Real:** Total de tarefas, pendentes e concluídas.
