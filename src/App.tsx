@@ -276,7 +276,7 @@ export default function App() {
           <ListTodo className="w-8 h-8" />
         </div>
         <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-          Lista Fan
+          My Checklist
         </h1>
         <p className="text-sm text-slate-600 mt-2">
           Gerencie suas tarefas com datas, horários, legendas coloridas e salvamento automático.
@@ -385,10 +385,10 @@ export default function App() {
                 <span>Ainda não está para vencer (Azul Marinho)</span>
               </div>
 
-              {/* Concluída (Verde) */}
-              <div className="inline-flex items-center gap-1.5 font-medium text-emerald-700">
-                <span className="w-3 h-3 rounded-full bg-emerald-600 ring-2 ring-emerald-100 shrink-0" />
-                <span>Concluída (Verde)</span>
+              {/* Concluída (Cinza) */}
+              <div className="inline-flex items-center gap-1.5 font-medium text-slate-600">
+                <span className="w-3 h-3 rounded-full bg-slate-400 ring-2 ring-slate-200 shrink-0" />
+                <span>Concluída (Cinza)</span>
               </div>
             </div>
           </div>
@@ -428,13 +428,13 @@ export default function App() {
                   !tarefa.concluida && situacao.tipo === 'a_vencer';
 
                 // Definição das cores e bordas conforme o estado da tarefa:
-                // - Concluída: VERDE (mesmo com data passada)
+                // - Concluída: CINZA (mesmo com data passada)
                 // - Pendente que vence no dia ou no dia seguinte: VERMELHO
                 // - Pendente que ainda não está para vencer: AZUL MARINHO
                 // - Pendente sem data: COR PADRÃO
                 let classesDoCard = 'p-4 rounded-xl border transition shadow-xs ';
                 if (tarefa.concluida) {
-                  classesDoCard += 'bg-emerald-50/80 border-emerald-300 hover:border-emerald-400';
+                  classesDoCard += 'bg-slate-100/90 border-slate-300 hover:border-slate-400 opacity-80';
                 } else if (ehVenceNoDiaOuDiaSeguinte) {
                   classesDoCard += 'bg-red-50/80 border-red-300 hover:border-red-400';
                 } else if (ehAindaNaoEstaParaVencer) {
@@ -536,7 +536,7 @@ export default function App() {
                             }`}
                           >
                             {tarefa.concluida ? (
-                              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                              <CheckCircle2 className="w-5 h-5 text-slate-500" />
                             ) : (
                               <Circle
                                 className={`w-5 h-5 ${
@@ -551,11 +551,11 @@ export default function App() {
                           </button>
 
                           <div className="flex flex-col flex-1 min-w-0">
-                            {/* Texto da tarefa: riscado quando concluída */}
+                            {/* Texto da tarefa: riscado e cinza quando concluída */}
                             <span
                               className={`text-sm sm:text-base break-words transition-all duration-200 ${
                                 tarefa.concluida
-                                  ? 'line-through text-slate-400'
+                                  ? 'line-through text-slate-500'
                                   : ehVenceNoDiaOuDiaSeguinte
                                   ? 'no-underline text-red-950 font-medium'
                                   : ehAindaNaoEstaParaVencer
@@ -570,8 +570,8 @@ export default function App() {
                             <div className="flex flex-wrap items-center gap-2 mt-1.5">
                               {/* Tag de status principal */}
                               {tarefa.concluida ? (
-                                <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                  <Check className="w-3 h-3" />
+                                <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-200 text-slate-700 border border-slate-300">
+                                  <Check className="w-3 h-3 text-slate-500" />
                                   Concluída
                                 </span>
                               ) : ehVenceNoDiaOuDiaSeguinte ? (
@@ -600,7 +600,7 @@ export default function App() {
                                 <span
                                   className={`inline-flex items-center gap-1.5 text-xs ${
                                     tarefa.concluida
-                                      ? 'text-slate-400'
+                                      ? 'text-slate-500'
                                       : ehVenceNoDiaOuDiaSeguinte
                                       ? 'text-red-700 font-medium'
                                       : ehAindaNaoEstaParaVencer
@@ -645,7 +645,7 @@ export default function App() {
                             onClick={() => alternarStatusTarefa(tarefa.id)}
                             className={`px-2.5 py-1.5 text-xs font-medium rounded-lg border transition cursor-pointer ${
                               tarefa.concluida
-                                ? 'border-emerald-300 text-emerald-800 hover:bg-emerald-100 bg-white'
+                                ? 'border-slate-300 text-slate-600 hover:bg-slate-200 bg-white'
                                 : ehAindaNaoEstaParaVencer
                                 ? 'border-blue-300 text-blue-900 hover:bg-blue-100 bg-white'
                                 : 'border-slate-300 text-slate-700 hover:bg-slate-100 bg-white'

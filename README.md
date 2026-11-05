@@ -1,4 +1,4 @@
-# 📝 Lista de Tarefas Simples
+# 📝 My Checklist
 
 Uma aplicação interativa de lista de tarefas (*To-Do List*) desenvolvida especialmente para quem está dando os primeiros passos no aprendizado de programação para a web.
 
@@ -18,10 +18,10 @@ Este projeto demonstra como construir uma interface web reativa e intuitiva util
 - **Legenda de Cores Inteligente:**
   - 🔴 **Vermelho:** tarefas pendentes que **vencem no dia e no dia seguinte** (ou que já estão atrasadas).
   - 🔵 **Azul Marinho:** tarefas pendentes que **ainda não estão para vencer** (com prazo futuro garantido).
-  - 🟢 **Verde:** tarefas **concluídas**, com texto riscado e status "Concluída", mesmo que a data já tenha passado.
+  - 🔘 **Cinza:** tarefas **concluídas**, com texto riscado e status "Concluída", mesmo que a data já tenha passado.
   - ⚪ **Padrão:** tarefas sem data de vencimento definida.
 - **Editar Tarefa com Data e Horário (ATUALIZAR):** Altere o texto, a data e o horário com os botões **Salvar** e **Cancelar**.
-- **Marcar como Concluída / Pendente (ATUALIZAR):** Ao concluir, a tarefa fica verde e com texto riscado; ao desmarcar, a cor e os avisos são recalculados automaticamente com base na data.
+- **Marcar como Concluída / Pendente (ATUALIZAR):** Ao concluir, a tarefa fica cinza e com texto riscado; ao desmarcar, a cor e os avisos são recalculados automaticamente com base na data.
 - **Remover Tarefa (EXCLUIR):** Exclua tarefas individualmente clicando no botão **Remover**.
 - **Contadores em Tempo Real:** Total de tarefas, pendentes e concluídas.
 
@@ -128,13 +128,14 @@ if (textoLimpo === '') {
 ## 💡 Próximos Passos Sugeridos para Praticar
 
 - [x] **Edição de tarefas:** Permitir alterar o texto de uma tarefa já cadastrada com validação e cancelamento.
-- [ ] **Persistência local:** Salvar a lista no `localStorage` do navegador para não perder as tarefas ao recarregar a página.
+- [x] **Persistência local:** Salvar a lista no `localStorage` do navegador para não perder as tarefas ao recarregar a página.
 - [ ] **Filtros de visualização:** Botões para ver "Todas", "Apenas Pendentes" ou "Apenas Concluídas".
 - [ ] **Limpar tudo:** Um botão para apagar todas as tarefas concluídas de uma só vez.
 
 ---
 
 Feito para fins de estudo e prática de desenvolvimento web. Bons estudos! 🚀
+
 ## Demonstração online
 
-[Abra a Lista Fan no navegador](https://vaniaeloaradm-star.github.io/lista-de-tarefas/)
+[Abra o My Checklist no navegador](https://vestma.github.io/lista-de-tarefas/)
