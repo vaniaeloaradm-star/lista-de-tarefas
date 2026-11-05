@@ -424,7 +424,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col items-center py-10 px-4">
       {/* Cabeçalho */}
-      <header className="w-full max-w-xl text-center mb-6">
+      <header className="w-full max-w-2xl text-center mb-6">
         <div className="inline-flex items-center justify-center p-3 bg-blue-100 text-blue-900 rounded-2xl mb-3 shadow-sm">
           <ListTodo className="w-8 h-8" />
         </div>
@@ -437,7 +437,7 @@ export default function App() {
       </header>
 
       {/* Barra de Integração com Google Agenda (Opção B) */}
-      <section className="w-full max-w-xl mb-6 bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
+      <section className="w-full max-w-2xl mb-6 bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center shrink-0">
@@ -537,7 +537,7 @@ export default function App() {
       </section>
 
       {/* Cartão Principal */}
-      <main className="w-full max-w-xl bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
+      <main className="w-full max-w-2xl bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
         {/* Formulário para adicionar nova tarefa */}
         <section className="p-6 border-b border-slate-100 bg-slate-50/50">
           <form onSubmit={adicionarTarefa} className="flex flex-col gap-3">
@@ -687,7 +687,10 @@ export default function App() {
                     {/* Modo de Edição */}
                     {estaSendoEditada ? (
                       <div className="flex flex-col gap-3">
-                        <div className="flex flex-col md:flex-row gap-2">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">
+                            Editar descrição da tarefa:
+                          </label>
                           <input
                             type="text"
                             value={textoEmEdicao}
@@ -700,16 +703,18 @@ export default function App() {
                               if (e.key === 'Escape') cancelarEdicao();
                             }}
                             autoFocus
-                            className="flex-1 px-3 py-2 rounded-lg border border-blue-400 bg-blue-50/20 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 rounded-lg border border-blue-400 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="Edite o nome da tarefa..."
                           />
+                        </div>
 
-                          <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <input
                               type="date"
                               value={dataEmEdicao}
                               onChange={(e) => setDataEmEdicao(e.target.value)}
-                              className="px-3 py-2 rounded-lg border border-blue-400 bg-white text-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                              className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                               title="Data de vencimento (opcional)"
                             />
 
@@ -717,14 +722,16 @@ export default function App() {
                               type="time"
                               value={horarioEmEdicao}
                               onChange={(e) => setHorarioEmEdicao(e.target.value)}
-                              className="px-3 py-2 rounded-lg border border-blue-400 bg-white text-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                              className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                               title="Horário (opcional)"
                             />
+                          </div>
 
+                          <div className="flex items-center gap-2">
                             <button
                               type="button"
                               onClick={() => salvarEdicao(tarefa.id)}
-                              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white transition cursor-pointer"
+                              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white transition cursor-pointer"
                               title="Salvar alterações"
                             >
                               <Check className="w-3.5 h-3.5" />
@@ -755,14 +762,15 @@ export default function App() {
                         </span>
                       </div>
                     ) : (
-                      /* Modo de Visualização Normal */
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
+                      /* Modo de Visualização Normal com Layout Seguro e Responsivo */
+                      <div className="flex flex-col">
+                        {/* Linha superior: Checkbox + Texto + Badges de Status (largura total) */}
+                        <div className="flex items-start gap-3 w-full">
                           {/* Botão de alternar status */}
                           <button
                             type="button"
                             onClick={() => alternarStatusTarefa(tarefa.id)}
-                            className="mt-0.5 sm:mt-0 text-slate-600 hover:text-blue-600 transition cursor-pointer"
+                            className="mt-0.5 text-slate-600 hover:text-blue-600 transition cursor-pointer shrink-0"
                             title={
                               tarefa.concluida
                                 ? 'Marcar como pendente'
@@ -787,24 +795,24 @@ export default function App() {
                             )}
                           </button>
 
-                          <div className="flex flex-col flex-1 min-w-0">
-                            {/* Texto da tarefa: riscado quando concluída */}
-                            <span
-                              className={`text-sm sm:text-base break-words transition-all duration-200 ${
+                          <div className="flex-1 min-w-0">
+                            {/* Texto da tarefa: ocupa toda a largura livre */}
+                            <p
+                              className={`text-sm sm:text-base break-words font-medium leading-relaxed transition-all duration-200 ${
                                 tarefa.concluida
-                                  ? 'line-through text-slate-500'
+                                  ? 'line-through text-slate-500 font-normal'
                                   : ehVenceNoDiaOuDiaSeguinte
-                                  ? 'no-underline text-red-950 font-medium'
+                                  ? 'no-underline text-red-950 font-semibold'
                                   : ehAindaNaoEstaParaVencer
-                                  ? 'no-underline text-blue-950 font-medium'
-                                  : 'no-underline text-slate-800 font-normal'
+                                  ? 'no-underline text-blue-950 font-semibold'
+                                  : 'no-underline text-slate-800'
                               }`}
                             >
                               {tarefa.texto}
-                            </span>
+                            </p>
 
                             {/* Informações de status, alertas, data e horário */}
-                            <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                            <div className="flex flex-wrap items-center gap-2 mt-2">
                               {/* Tag de status principal */}
                               {tarefa.concluida ? (
                                 <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-200 text-slate-700 border border-slate-300">
@@ -871,82 +879,86 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* Ações da Tarefa */}
-                        <div className="flex flex-wrap items-center gap-2 self-end sm:self-center shrink-0">
-                          {/* Botão Sincronizar na Google Agenda (Opção B - API Oficial) */}
-                          {tarefa.dataVencimento && !tarefa.concluida && (
+                        {/* Barra inferior de Ações: organizada em linha separada que nunca aperta o texto */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3 border-t border-slate-200/80">
+                          {/* Grupo da Google Agenda */}
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {tarefa.dataVencimento && !tarefa.concluida && (
+                              <button
+                                type="button"
+                                onClick={() => solicitarSincronizacao(tarefa)}
+                                className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition cursor-pointer ${
+                                  tarefa.sincronizadaCalendar
+                                    ? 'border-emerald-300 text-emerald-800 bg-emerald-50 hover:bg-emerald-100'
+                                    : 'border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100'
+                                }`}
+                                title={
+                                  usuarioGoogle
+                                    ? 'Sincronizar evento na Google Agenda'
+                                    : 'Conectar Google para sincronizar'
+                                }
+                              >
+                                <CalendarPlus className="w-3.5 h-3.5 text-blue-600" />
+                                <span>
+                                  {tarefa.sincronizadaCalendar
+                                    ? 'Atualizar na Agenda'
+                                    : 'Sincronizar Agenda'}
+                                </span>
+                              </button>
+                            )}
+
+                            {tarefa.dataVencimento && (
+                              <a
+                                href={gerarLinkTemplateCalendar(tarefa)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 bg-white transition cursor-pointer"
+                                title="Abrir pré-preenchido no Google Agenda em nova aba"
+                              >
+                                <span>Abrir</span>
+                              </a>
+                            )}
+                          </div>
+
+                          {/* Grupo de Ações da Tarefa */}
+                          <div className="flex flex-wrap items-center gap-1.5 ml-auto">
+                            {/* Botão Concluir / Desmarcar */}
                             <button
                               type="button"
-                              onClick={() => solicitarSincronizacao(tarefa)}
-                              className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border transition cursor-pointer ${
-                                tarefa.sincronizadaCalendar
-                                  ? 'border-emerald-200 text-emerald-800 bg-emerald-50 hover:bg-emerald-100'
-                                  : 'border-blue-200 text-blue-700 bg-blue-50/70 hover:bg-blue-100'
+                              onClick={() => alternarStatusTarefa(tarefa.id)}
+                              className={`px-2.5 py-1.5 text-xs font-medium rounded-lg border transition cursor-pointer ${
+                                tarefa.concluida
+                                  ? 'border-slate-300 text-slate-700 hover:bg-slate-200 bg-white'
+                                  : ehAindaNaoEstaParaVencer
+                                  ? 'border-blue-300 text-blue-900 hover:bg-blue-100 bg-white'
+                                  : 'border-slate-300 text-slate-700 hover:bg-slate-100 bg-white'
                               }`}
-                              title={
-                                usuarioGoogle
-                                  ? 'Sincronizar evento na Google Agenda'
-                                  : 'Conectar Google para sincronizar'
-                              }
                             >
-                              <CalendarPlus className="w-3.5 h-3.5 text-blue-600" />
-                              <span>
-                                {tarefa.sincronizadaCalendar
-                                  ? 'Atualizar na Agenda'
-                                  : 'Sincronizar Agenda'}
-                              </span>
+                              {tarefa.concluida ? 'Marcar como pendente' : 'Marcar como concluída'}
                             </button>
-                          )}
 
-                          {/* Link rápido de abertura direta no Google Agenda */}
-                          {tarefa.dataVencimento && (
-                            <a
-                              href={gerarLinkTemplateCalendar(tarefa)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition cursor-pointer"
-                              title="Abrir no Google Agenda em nova aba"
+                            {/* Botão Editar */}
+                            <button
+                              type="button"
+                              onClick={() => iniciarEdicao(tarefa)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 bg-white transition cursor-pointer"
+                              title="Editar tarefa"
                             >
-                              <span>Abrir</span>
-                            </a>
-                          )}
+                              <Pencil className="w-3.5 h-3.5" />
+                              <span>Editar</span>
+                            </button>
 
-                          {/* Botão Editar */}
-                          <button
-                            type="button"
-                            onClick={() => iniciarEdicao(tarefa)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 transition cursor-pointer"
-                            title="Editar tarefa"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                            <span>Editar</span>
-                          </button>
-
-                          {/* Botão Concluir / Desmarcar */}
-                          <button
-                            type="button"
-                            onClick={() => alternarStatusTarefa(tarefa.id)}
-                            className={`px-2.5 py-1.5 text-xs font-medium rounded-lg border transition cursor-pointer ${
-                              tarefa.concluida
-                                ? 'border-slate-300 text-slate-600 hover:bg-slate-200 bg-white'
-                                : ehAindaNaoEstaParaVencer
-                                ? 'border-blue-300 text-blue-900 hover:bg-blue-100 bg-white'
-                                : 'border-slate-300 text-slate-700 hover:bg-slate-100 bg-white'
-                            }`}
-                          >
-                            {tarefa.concluida ? 'Marcar como pendente' : 'Marcar como concluída'}
-                          </button>
-
-                          {/* Botão Remover */}
-                          <button
-                            type="button"
-                            onClick={() => removerTarefa(tarefa.id)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition cursor-pointer"
-                            title="Remover tarefa"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>Remover</span>
-                          </button>
+                            {/* Botão Remover */}
+                            <button
+                              type="button"
+                              onClick={() => removerTarefa(tarefa.id)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition cursor-pointer"
+                              title="Remover tarefa"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Remover</span>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )}
