@@ -130,3 +130,6 @@ if (textoLimpo === '') {
 ---
 
 Feito para fins de estudo e prática de desenvolvimento web. Bons estudos! 🚀
+## Demonstração online
+
+[Abra a Lista Fan no navegador](https://vaniaeloaradm-star.github.io/lista-de-tarefas/)
